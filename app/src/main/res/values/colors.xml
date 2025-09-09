@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="dark_blue_bg">#111122</color>
+    <color name="dark_blue_card">#1C1C3A</color>
+    <color name="dark_blue_footer">#191933</color>
+    <color name="dark_blue_divider">#232348</color>
+    <color name="primary_indigo">#1313ec</color>
+    <color name="text_purple_light">#9292c9</color>
+    <color name="chip_day_background">#333366</color> <!-- Added -->
+    <color name="chip_day_text">#FFFFFFFF</color> <!-- Added -->
+</resources>
