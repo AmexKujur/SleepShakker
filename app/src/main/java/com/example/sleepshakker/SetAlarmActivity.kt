@@ -17,9 +17,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.get
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope // ADDED
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.switchmaterial.SwitchMaterial
+import kotlinx.coroutines.launch // ADDED
 import java.util.Calendar
 import java.util.Locale
 
@@ -37,30 +39,33 @@ class SetAlarmActivity : AppCompatActivity() {
     private lateinit var minutePicker: NumberPicker
     private lateinit var amPmGroup: RadioGroup
     private lateinit var dailySwitch: SwitchMaterial
-    private lateinit var dayChipGroup: ChipGroup
-    private lateinit var chipSunday: Chip
-    private lateinit var chipMonday: Chip
-    private lateinit var chipTuesday: Chip
-    private lateinit var chipWednesday: Chip
-    private lateinit var chipThursday: Chip
-    private lateinit var chipFriday: Chip
-    private lateinit var chipSaturday: Chip
+    // The following lines related to individual day chips and ChipGroup are being removed
+    // as per the user's request to simplify to just a "daily" switch.
+    // private lateinit var dayChipGroup: ChipGroup
+    // private lateinit var chipSunday: Chip
+    // private lateinit var chipMonday: Chip
+    // private lateinit var chipTuesday: Chip
+    // private lateinit var chipWednesday: Chip
+    // private lateinit var chipThursday: Chip
+    // private lateinit var chipFriday: Chip
+    // private lateinit var chipSaturday: Chip
+    // private lateinit var dayChips: List<Chip>
 
-    private lateinit var dayChips: List<Chip>
-
-    // Flags to prevent listener loops for day selection
-    private var isDailySwitchUpdatingChips = false
-    private var isChipUpdatingDailySwitch = false
+    // Flags to prevent listener loops for day selection - No longer needed
+    // private var isDailySwitchUpdatingChips = false
+    // private var isChipUpdatingDailySwitch = false
 
     // Dismiss options
     private lateinit var dismissOptionsRadioGroup: RadioGroup
     private var selectedDismissOptionType: String = "SHAKE" // Default
     private val dismissOptionsList = listOf(
-        DismissOption("Shake Phone", R.drawable.ic_vibration, "SHAKE"), // Replace R.drawable.ic_vibration with actual shake icon
-        DismissOption("Math Quiz", android.R.drawable.ic_dialog_info, "MATH"), // Replace with actual math icon
+        DismissOption("Shake Phone", R.drawable.ic_vibration, "SHAKE"),
+        DismissOption("Math Quiz", android.R.drawable.ic_dialog_info, "MATH"),
         DismissOption("Turn On Lights", R.drawable.ic_lightbulb, "LUX_CHALLENGE")
     )
 
+    // ADDED: Database Access Object
+    private lateinit var alarmDao: AlarmDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,28 +75,23 @@ class SetAlarmActivity : AppCompatActivity() {
         val viewModelFactory = SetAlarmViewModelFactory(alarmScheduler)
         viewModel = ViewModelProvider(this, viewModelFactory)[SetAlarmViewModel::class.java]
 
+        // ADDED: Initialize alarmDao
+        alarmDao = AppDatabase.getDatabase(applicationContext).alarmDao()
+
         hourPicker = findViewById(R.id.hourPicker)
         minutePicker = findViewById(R.id.minutePicker)
         amPmGroup = findViewById(R.id.amPmGroup)
         dailySwitch = findViewById(R.id.dailySwitch)
-        dayChipGroup = findViewById(R.id.dayChipGroup)
         dismissOptionsRadioGroup = findViewById(R.id.dismissOptionsRadioGroup)
 
-        chipSunday = findViewById(R.id.chipSunday)
-        chipMonday = findViewById(R.id.chipMonday)
-        chipTuesday = findViewById(R.id.chipTuesday)
-        chipWednesday = findViewById(R.id.chipWednesday)
-        chipThursday = findViewById(R.id.chipThursday)
-        chipFriday = findViewById(R.id.chipFriday)
-        chipSaturday = findViewById(R.id.chipSaturday)
-        dayChips = listOf(chipSunday, chipMonday, chipTuesday, chipWednesday, chipThursday, chipFriday, chipSaturday)
+        // Removed findViewById calls for dayChipGroup and individual day chips
 
         findViewById<ImageButton>(R.id.backButton).setOnClickListener {
             finish()
         }
 
         setupTimePickers()
-        setupDaySelectionLogic()
+        // Removed call to setupDaySelectionLogic()
         setupDismissOptions()
 
         findViewById<Button>(R.id.saveAlarmButton).setOnClickListener {
@@ -102,6 +102,8 @@ class SetAlarmActivity : AppCompatActivity() {
     private fun setupTimePickers() {
         hourPicker.minValue = 1
         hourPicker.maxValue = 12
+        // UPDATED: Added formatter for hours to show double digits (e.g., 01, 02)
+        hourPicker.setFormatter { value -> String.format(Locale.getDefault(), "%02d", value) }
         minutePicker.minValue = 0
         minutePicker.maxValue = 59
         minutePicker.setFormatter { value -> String.format(Locale.getDefault(), "%02d", value) }
@@ -116,22 +118,7 @@ class SetAlarmActivity : AppCompatActivity() {
         if (currentHour24 < 12) amPmGroup.check(R.id.amButton) else amPmGroup.check(R.id.pmButton)
     }
 
-    private fun setupDaySelectionLogic() {
-        dailySwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChipUpdatingDailySwitch) return@setOnCheckedChangeListener
-            isDailySwitchUpdatingChips = true
-            dayChips.forEach { it.isChecked = isChecked }
-            isDailySwitchUpdatingChips = false
-        }
-        dayChips.forEach { chip ->
-            chip.setOnCheckedChangeListener { _, _ ->
-                if (isDailySwitchUpdatingChips) return@setOnCheckedChangeListener
-                isChipUpdatingDailySwitch = true
-                dailySwitch.isChecked = dayChips.all { it.isChecked }
-                isChipUpdatingDailySwitch = false
-            }
-        }
-    }
+    // Removed setupDaySelectionLogic() method as it's no longer needed
 
     private fun setupDismissOptions() {
         val inflater = LayoutInflater.from(this)
@@ -157,7 +144,7 @@ class SetAlarmActivity : AppCompatActivity() {
 
             itemView.setOnClickListener {
                 if (!radioButton.isChecked) {
-                    dismissOptionsRadioGroup.check(radioButton.id) // Corrected line
+                    dismissOptionsRadioGroup.check(radioButton.id)
                 }
             }
             dismissOptionsRadioGroup.addView(itemView)
@@ -169,12 +156,11 @@ class SetAlarmActivity : AppCompatActivity() {
 
         dismissOptionsRadioGroup.setOnCheckedChangeListener { group, checkedId ->
             val checkedRadioButton = group.findViewById<RadioButton>(checkedId)
-            if (checkedRadioButton != null) { // Check if a radio button was actually found
+            if (checkedRadioButton != null) {
                 selectedDismissOptionType = checkedRadioButton.tag as? String ?: "SHAKE" // Fallback
                 Log.d("SetAlarmActivity", "Dismiss option selected: $selectedDismissOptionType")
             } else {
                 Log.w("SetAlarmActivity", "No RadioButton found for checkedId: $checkedId. This shouldn't happen.")
-                // Handle case where no radio button is found, perhaps default
                 selectedDismissOptionType = "SHAKE" // Fallback to a safe default
             }
         }
@@ -195,35 +181,48 @@ class SetAlarmActivity : AppCompatActivity() {
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
 
-        if (calendar.timeInMillis < System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_YEAR, 1)
-        }
-
-        val repeatDays = mutableSetOf<Int>()
+        val repeatDays: MutableSet<Int> = mutableSetOf()
         if (dailySwitch.isChecked) {
-            // For daily, can be an empty set or all days, depends on scheduler logic
+            // For daily, set all days of the week (1=Sunday, 7=Saturday)
+            (1..7).toSet().forEach { repeatDays.add(it) }
+            // Adjust calendar to the first upcoming instance of this time
+            while (calendar.timeInMillis < System.currentTimeMillis() || !repeatDays.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
+                if (calendar.timeInMillis < System.currentTimeMillis() && repeatDays.contains(calendar.get(Calendar.DAY_OF_WEEK))) {
+                    calendar.add(Calendar.DAY_OF_YEAR, 7)
+                } else {
+                    calendar.add(Calendar.DAY_OF_YEAR, 1)
+                }
+            }
         } else {
-            if (chipSunday.isChecked) repeatDays.add(Calendar.SUNDAY)
-            if (chipMonday.isChecked) repeatDays.add(Calendar.MONDAY)
-            if (chipTuesday.isChecked) repeatDays.add(Calendar.TUESDAY)
-            if (chipWednesday.isChecked) repeatDays.add(Calendar.WEDNESDAY)
-            if (chipThursday.isChecked) repeatDays.add(Calendar.THURSDAY)
-            if (chipFriday.isChecked) repeatDays.add(Calendar.FRIDAY)
-            if (chipSaturday.isChecked) repeatDays.add(Calendar.SATURDAY)
+            // One-time alarm, ensure it's in the future
+            if (calendar.timeInMillis < System.currentTimeMillis()) {
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+            }
         }
 
-        val alarmId = System.currentTimeMillis()
+        // Create AlarmItem without an ID, let Room generate it
         val alarmItem = AlarmItem(
-            id = alarmId,
             timeInMillis = calendar.timeInMillis,
-            message = "Alarm for ${String.format("%02d:%02d", hourPicker.value, minutePicker.value)} ${if (isPm) "PM" else "AM"}",
+            message = "Alarm for ${String.format("%02d:%02d", selectedHour, selectedMinute)} ${if (isPm) "PM" else "AM"}",
             isEnabled = true,
-            repeatDays = if (repeatDays.isEmpty() && !dailySwitch.isChecked && !dayChips.any { it.isChecked }) null else repeatDays,
-            dismissOption = selectedDismissOptionType // Use the selected dismiss option
+            repeatDays = if (repeatDays.isEmpty()) null else repeatDays,
+            dismissOption = selectedDismissOptionType
         )
-        Log.d("SetAlarmActivity", "Saving AlarmItem: $alarmItem")
-        viewModel.schedule(alarmItem)
-        finish()
+
+        // UPDATED: Use a coroutine to insert into the database
+        lifecycleScope.launch {
+            // Insert into database and get the new ID
+            val newId = alarmDao.insert(alarmItem)
+            // Update the alarmItem with the database-generated ID
+            val scheduledAlarmItem = alarmItem.copy(id = newId)
+
+            Log.d("SetAlarmActivity", "Saving AlarmItem with dismissOption: ${scheduledAlarmItem.dismissOption}")
+            Log.d("SetAlarmActivity", "Saving AlarmItem: $scheduledAlarmItem, calculated time: ${calendar.time}, repeatDays: $repeatDays")
+
+            // Schedule the alarm using the updated AlarmItem with the correct ID
+            viewModel.schedule(scheduledAlarmItem)
+
+            finish() // Finish the activity after scheduling and database operation
+        }
     }
 }
-
