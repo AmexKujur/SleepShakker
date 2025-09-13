@@ -4,7 +4,9 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" /> <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 
     <application
@@ -19,17 +21,20 @@
 
         <receiver android:name=".AlarmReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
+        <!-- Removed the redundant intent-filter from here -->
+
         <activity
             android:name=".DismissActivity"
             android:exported="false"
             android:showOnLockScreen="true"
-            android:turnScreenOn="true" />
+            android:turnScreenOn="true"
+            android:launchMode="standard" />
         <activity
             android:name=".SetAlarmActivity"
             android:exported="false" />
